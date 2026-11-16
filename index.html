@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Free Passport Photos — print-ready 4×6 sheets</title>
+  <meta name="description" content="Make a printable 4x6 sheet of passport photos (U.S. 2x2 in, Vietnam 4x6 cm) for free. Runs entirely in your browser — your photo is never uploaded.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%232463eb'/%3E%3Ccircle cx='16' cy='13' r='6' fill='%23fff'/%3E%3Cpath d='M6 29c1-6 5-9 10-9s9 3 10 9z' fill='%23fff'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <h1>Free Passport Photos</h1>
+    <p class="sub">Passport photos on a 4×6&nbsp;in print · <strong>your photo never leaves your browser</strong></p>
+  </header>
+
+  <main>
+    <div class="preset-bar">
+      <label for="preset">Photo type</label>
+      <select id="preset"></select>
+    </div>
+
+    <!-- Step 1: upload -->
+    <section id="dropzone" class="dropzone">
+      <input type="file" id="file" accept="image/*" hidden>
+      <div class="drop-inner">
+        <p class="drop-title">Drop a photo here</p>
+        <p>or</p>
+        <button type="button" id="pick" class="btn primary">Choose a photo</button>
+        <p class="hint">Use a well-lit, front-facing photo against a plain white or off-white background.</p>
+        <p id="error" class="error" hidden></p>
+      </div>
+    </section>
+
+    <!-- Step 2 + 3: edit and export -->
+    <section id="editor" class="editor" hidden>
+      <div class="frame-col">
+        <h2><span class="step">1</span> Position your face</h2>
+        <p class="hint" id="frameHint"></p>
+        <div class="frame-wrap" id="frameWrap">
+          <canvas id="frame" class="frame" aria-label="Photo framing area"></canvas>
+        </div>
+        <label class="row-check"><input type="checkbox" id="showGuides" checked> Show guides</label>
+      </div>
+
+      <div class="controls-col">
+        <h2><span class="step">2</span> Adjust</h2>
+        <div class="controls">
+          <label>Zoom <output id="zoomOut"></output>
+            <input type="range" id="zoom" min="0.5" max="4" step="0.01" value="1"></label>
+          <label>Rotate <output id="rotateOut"></output>
+            <input type="range" id="rotate" min="-15" max="15" step="0.1" value="0"></label>
+          <label>Brightness <output id="brightnessOut"></output>
+            <input type="range" id="brightness" min="-100" max="100" step="1" value="0"></label>
+          <label>Contrast <output id="contrastOut"></output>
+            <input type="range" id="contrast" min="-100" max="100" step="1" value="0"></label>
+          <label>Saturation <output id="saturationOut"></output>
+            <input type="range" id="saturation" min="-100" max="100" step="1" value="0"></label>
+          <label>Warmth <output id="warmthOut"></output>
+            <input type="range" id="warmth" min="-100" max="100" step="1" value="0"></label>
+          <div class="btn-row">
+            <button type="button" id="resetAdjust" class="btn">Reset adjustments</button>
+            <button type="button" id="resetFrame" class="btn">Reset framing</button>
+          </div>
+        </div>
+
+        <h2><span class="step">3</span> Download</h2>
+        <fieldset class="layout">
+          <legend>Layout on 4×6</legend>
+          <div id="layoutOptions"></div>
+        </fieldset>
+        <div class="copies">
+          <label for="copies">Copies on the print</label>
+          <select id="copies"></select>
+        </div>
+        <canvas id="sheetPreview" class="sheet-preview" aria-label="4x6 print preview"></canvas>
+        <div class="btn-row">
+          <button type="button" id="download" class="btn primary">Download 4×6 print (JPG)</button>
+          <button type="button" id="downloadSingle" class="btn">Single photo (JPG)</button>
+        </div>
+        <p class="hint">Print at <strong>4×6 in, actual size</strong> — turn off “fit” / “fill” / borderless cropping if your printer or lab offers it. <span id="outputInfo"></span></p>
+        <button type="button" id="newPhoto" class="btn link">Use a different photo</button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot" id="footNote"></footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
