@@ -19,16 +19,16 @@
       <label for="preset">Photo type</label>
       <select id="preset"></select>
     </div>
+    <p id="notice" class="notice" role="status" hidden></p>
 
     <!-- Step 1: upload -->
     <section id="dropzone" class="dropzone">
-      <input type="file" id="file" accept="image/*" hidden>
+      <input type="file" id="file" accept="image/*,.heic,.heif" hidden>
       <div class="drop-inner">
         <p class="drop-title">Drop a photo here</p>
         <p>or</p>
         <button type="button" id="pick" class="btn primary">Choose a photo</button>
         <p class="hint">Use a well-lit, front-facing photo against a plain white or off-white background.</p>
-        <p id="error" class="error" hidden></p>
       </div>
     </section>
 

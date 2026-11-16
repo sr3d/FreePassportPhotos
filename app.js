@@ -35,7 +35,7 @@
 
   // ---- Elements ------------------------------------------------------------
   const $ = (id) => document.getElementById(id);
-  const dropzone = $('dropzone'), fileInput = $('file'), errorEl = $('error');
+  const dropzone = $('dropzone'), fileInput = $('file'), notice = $('notice');
   const editor = $('editor'), frame = $('frame'), frameWrap = $('frameWrap'), sheetPreview = $('sheetPreview');
   const showGuides = $('showGuides'), presetSel = $('preset'), copiesSel = $('copies');
   const layoutFieldset = document.querySelector('.layout'), layoutOptions = $('layoutOptions');
@@ -172,41 +172,87 @@
   presetSel.addEventListener('change', () => applyPreset(presetSel.value));
 
   // ---- Loading -------------------------------------------------------------
-  function showError(msg) {
-    errorEl.textContent = msg;
-    errorEl.hidden = !msg;
+  function showNotice(msg, isError = false) {
+    notice.textContent = msg;
+    notice.classList.toggle('error', isError);
+    notice.hidden = !msg;
   }
 
-  async function loadFile(file) {
-    showError('');
-    if (!file) return;
+  // Decode with the browser's own decoder (applies EXIF orientation).
+  async function decodeNative(file) {
     const url = URL.createObjectURL(file);
     try {
       const img = new Image();
       img.src = url;
-      await img.decode();               // browsers apply EXIF orientation when drawing
-      const w = img.naturalWidth, h = img.naturalHeight;
-      if (!w || !h) throw new Error('empty image');
-      const s = Math.min(1, MAX_SOURCE / Math.max(w, h));
-      const c = document.createElement('canvas');
-      c.width = Math.round(w * s);
-      c.height = Math.round(h * s);
-      const cx = c.getContext('2d');
-      cx.imageSmoothingQuality = 'high';
-      cx.drawImage(img, 0, 0, c.width, c.height);
-      src = c;
-      resetFraming();
-      dropzone.hidden = true;
-      editor.hidden = false;
-      requestRender();
-    } catch (e) {
-      const heic = /hei[cf]/i.test(file.type) || /\.hei[cf]$/i.test(file.name);
-      showError(heic
-        ? 'This browser can’t open HEIC photos. Export or share the photo as JPEG first (on iPhone: Settings → Camera → Formats → Most Compatible), or try Safari.'
-        : 'Couldn’t open that file. Please choose a JPEG, PNG or WebP photo.');
+      await img.decode();
+      if (!img.naturalWidth || !img.naturalHeight) throw new Error('empty image');
+      return img;
     } finally {
       URL.revokeObjectURL(url);
     }
+  }
+
+  // HEIC/HEIF files start with an ISO-BMFF 'ftyp' box naming a HEIF brand.
+  async function looksLikeHeic(file) {
+    if (/hei[cf]/i.test(file.type) || /\.hei[cf]$/i.test(file.name)) return true;
+    const head = new TextDecoder('ascii').decode(await file.slice(4, 12).arrayBuffer());
+    return head.startsWith('ftyp') && /^(heic|heix|hevc|hevx|heim|heis|mif1|msf1)$/.test(head.slice(4).trim());
+  }
+
+  // Fallback for browsers without HEIC support (Chrome, Firefox): decode in
+  // memory with libheif, loaded on first use only. Nothing is uploaded.
+  let heicLib = null;
+  async function decodeHeic(file) {
+    heicLib = heicLib || import('./vendor/heic-to/heic-to.js');
+    const { heicTo } = await heicLib;
+    return heicTo({ blob: file, type: 'bitmap' });   // libheif applies HEIC rotation/mirroring
+  }
+
+  // Copy the decoded image into a (possibly downscaled) canvas used as the source.
+  function toSourceCanvas(image, w, h) {
+    const s = Math.min(1, MAX_SOURCE / Math.max(w, h));
+    const c = document.createElement('canvas');
+    c.width = Math.round(w * s);
+    c.height = Math.round(h * s);
+    const cx = c.getContext('2d');
+    cx.imageSmoothingQuality = 'high';
+    cx.drawImage(image, 0, 0, c.width, c.height);
+    return c;
+  }
+
+  let loadSeq = 0;
+  async function loadFile(file) {
+    if (!file) return;
+    const seq = ++loadSeq;
+    showNotice('');
+    let canvas = null;
+    try {
+      const img = await decodeNative(file);
+      canvas = toSourceCanvas(img, img.naturalWidth, img.naturalHeight);
+    } catch {
+      if (await looksLikeHeic(file)) {
+        showNotice('Converting HEIC photo… (this happens on your device and can take a few seconds)');
+        try {
+          const bmp = await decodeHeic(file);
+          canvas = toSourceCanvas(bmp, bmp.width, bmp.height);
+          bmp.close();
+        } catch (e) {
+          console.error('HEIC decode failed', e);
+          if (seq === loadSeq) showNotice('Couldn’t convert this HEIC photo. Try exporting it as JPEG first (on iPhone: Settings → Camera → Formats → Most Compatible).', true);
+          return;
+        }
+      } else {
+        if (seq === loadSeq) showNotice('Couldn’t open that file. Please choose a JPEG, PNG, WebP or HEIC photo.', true);
+        return;
+      }
+    }
+    if (seq !== loadSeq) return;        // a newer file was chosen meanwhile
+    showNotice('');
+    src = canvas;
+    resetFraming();
+    dropzone.hidden = true;
+    editor.hidden = false;
+    requestRender();
   }
 
   $('pick').addEventListener('click', () => fileInput.click());
@@ -531,5 +577,5 @@
   applyPreset(store.get('preset') || 'us');
 
   // Expose a tiny hook for automated checks.
-  window.__passport = { view, adjust, renderTile, applyPreset, get layouts() { return layouts; }, get tile() { return [tileW, tileH]; } };
+  window.__passport = { view, adjust, renderTile, applyPreset, get src() { return src; }, get layouts() { return layouts; }, get tile() { return [tileW, tileH]; } };
 })();

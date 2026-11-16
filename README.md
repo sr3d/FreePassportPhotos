@@ -6,6 +6,8 @@ Upload a photo → drag and zoom to frame your face → adjust brightness, contr
 
 **Your photo never leaves your browser.** Everything runs client-side; there is no server or upload.
 
+Accepts JPEG, PNG, WebP and HEIC/HEIF (iPhone) photos. Browsers without built-in HEIC support (Chrome, Firefox) get a decoder that is loaded only when needed and runs in memory on your device.
+
 ## Supported photo types
 
 | Type | Photo size | Photos per 4×6 in print |
@@ -27,3 +29,7 @@ python3 -m http.server 8000
 ```
 
 It can be hosted as-is on GitHub Pages, Netlify or Cloudflare Pages.
+
+## Third-party code
+
+`vendor/heic-to/` contains an unmodified build of [heic-to](https://github.com/hoppergee/heic-to) (libheif), licensed under LGPL-3.0. See `vendor/heic-to/LICENSE`.
